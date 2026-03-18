@@ -1,0 +1,113 @@
+version: '3.9'
+
+services:
+
+  # ── 1. PostgreSQL Database ─────────────────────
+  db:
+    image: postgres:15
+    container_name: voiceiq_db
+    restart: always
+    environment:
+      POSTGRES_DB:       ${DB_NAME}
+      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - voiceiq_net
+
+  # ── 2. Redis (session/cache store) ─────────────
+  redis:
+    image: redis:7-alpine
+    container_name: voiceiq_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - voiceiq_net
+
+  # ── 3. RabbitMQ (async analysis queue) ──────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: voiceiq_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"     # AMQP protocol
+      - "15672:15672"   # Management UI → http://localhost:15672
+    volumes:
+      - rabbitdata:/var/lib/rabbitmq
+    networks:
+      - voiceiq_net
+
+  # ── 4. Faster-Whisper Transcription Service ─────
+  whisper:
+    build:
+      context: ./whisper-service
+      dockerfile: Dockerfile
+    container_name: voiceiq_whisper
+    restart: always
+    environment:
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-base}
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_LANGUAGE: en
+    ports:
+      - "9000:9000"
+    networks:
+      - voiceiq_net
+
+  # ── 5. Spring Boot Backend ─────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voiceiq_backend
+    restart: always
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+      - whisper
+    environment:
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
+      REDIS_HOST:                 redis
+      RABBIT_HOST:                rabbitmq
+      WHISPER_SERVICE_URL:        http://whisper:9000
+      GEMINI_API_KEY:             ${GEMINI_API_KEY:-}
+      JWT_SECRET:                 ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    networks:
+      - voiceiq_net
+
+  # ── 6. Nginx Reverse Proxy (optional for prod) ─
+  nginx:
+    image: nginx:alpine
+    container_name: voiceiq_proxy
+    depends_on:
+      - backend
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    networks:
+      - voiceiq_net
+
+volumes:
+  pgdata:      # persists DB data
+  redisdata:   # persists Redis data
+  rabbitdata:  # persists RabbitMQ data
+
+networks:
+  voiceiq_net:
+    driver: bridge

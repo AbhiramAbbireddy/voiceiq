@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+
+  # ── 1. PostgreSQL Database ─────────────────────
+  db:
+    image: postgres:15
+    container_name: voiceiq_db
+    restart: always
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-voiceiq}
+      POSTGRES_USER:     ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-abhiram123}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - voiceiq_net
+
+  # ── 2. Unified FastAPI Backend ────────────────────────
+  backend:
+    build:
+      context: ./fastapi_backend
+      dockerfile: Dockerfile
+    container_name: voiceiq_fastapi
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_NAME:            ${DB_NAME:-voiceiq}
+      DB_USER:            ${DB_USER:-postgres}
+      DB_PASS:            ${DB_PASS:-abhiram123}
+      DB_HOST:            db
+      DB_PORT:            "5432"
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-base}
+      WHISPER_DEVICE:     cpu
+      # For an 8GB machine, keeping compute type int8 is critical
+      WHISPER_COMPUTE_TYPE: int8
+      GEMINI_API_KEY:     ${GEMINI_API_KEY:-}
+      JWT_SECRET:         ${JWT_SECRET:-change-me-to-a-very-long-secret-key}
+    ports:
+      - "8080:8000"
+    volumes:
+      # Map the local uploads folder so recordings persist across reboots currently
+      - ./fastapi_backend/uploads:/app/uploads
+    networks:
+      - voiceiq_net
+
+volumes:
+  pgdata:      # persists DB data
+
+networks:
+  voiceiq_net:
+    driver: bridge

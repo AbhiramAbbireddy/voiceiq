@@ -1,0 +1,57 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+uvicorn.log
+startup.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+fastapi_backend/venv/
+fastapi_backend/__pycache__/
+fastapi_backend/uploads/*
+!fastapi_backend/uploads/.gitkeep
+
+# Flutter / Dart
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.metadata
+frontend/frontend.iml
+frontend/android/.gradle/
+frontend/android/app/debug/
+frontend/android/app/profile/
+frontend/android/app/release/
+
+# Java / Spring archived backend
+backend_spring_deprecated/.idea/
+backend_spring_deprecated/target/
+backend_spring_deprecated/uploads/*
+!backend_spring_deprecated/uploads/.gitkeep
+
+# Local tooling and package caches
+.m2/
+.gradle/
+*.iml
