@@ -1,7 +1,7 @@
 <p align="center">
-  <h1 align="center">VoiceIQ — AI Interview Coach</h1>
+  <h1 align="center">VoiceIQ — AI Interview Speaking Coach</h1>
   <p align="center">
-    AI-powered speaking coach to help users improve interview performance through structured feedback.
+    AI-powered platform to help users improve interview communication through speech analysis and feedback.
   </p>
 </p>
 
@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/PostgreSQL-Database-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Whisper-AI-orange?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Python-3.10+-yellow?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Docker-Containerization-blue?style=for-the-badge" />
   <img src="https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge" />
 </p>
 
@@ -18,9 +19,9 @@
 
 ## Overview
 
-VoiceIQ is an AI-powered interview speaking coach that enables users to record responses, upload audio, receive AI-generated feedback, and track progress over time.
+VoiceIQ is an AI-powered interview speaking coach designed to help users prepare for interviews by analyzing their spoken responses.
 
-It combines a Flutter mobile app with a FastAPI backend, PostgreSQL database, and Whisper-based transcription.
+Users can record answers, upload audio, receive AI-generated feedback, and track their progress over time. The system combines a mobile frontend with a scalable backend and speech-to-text intelligence.
 
 ---
 
@@ -29,10 +30,12 @@ It combines a Flutter mobile app with a FastAPI backend, PostgreSQL database, an
 - Features  
 - Architecture  
 - Tech Stack  
-- Getting Started  
 - Project Structure  
+- Getting Started  
 - API Flow  
+- Development Notes  
 - Next Steps  
+- License  
 
 ---
 
@@ -40,142 +43,23 @@ It combines a Flutter mobile app with a FastAPI backend, PostgreSQL database, an
 
 | Module | Description |
 |--------|------------|
-| Voice Recording | Record audio or upload existing responses |
-| Transcription | Convert speech to text using Whisper |
-| AI Feedback | Generate structured feedback for improvement |
-| Reports | Display transcript and coaching insights |
+| Voice Recording | Record answers or upload audio files |
+| Speech-to-Text | Transcription using faster-whisper |
+| AI Feedback | Analyze responses and generate improvement suggestions |
+| Reports | Structured feedback with transcript display |
 | Authentication | Secure login and signup with JWT |
-| Progress Tracking | Monitor user improvement over time |
+| Progress Tracking | Monitor user performance over time |
 
 ---
 
 ## Architecture
 
 ```text
-Mobile App (Flutter)
+Flutter Mobile App
         │
         ▼
 FastAPI Backend (Python)
         │
-        ├── Whisper (Speech-to-Text)
+        ├── Speech-to-Text (Whisper)
         ├── AI Feedback Engine
         └── PostgreSQL Database
-Tech Stack
-
-Flutter (Mobile frontend)
-
-FastAPI (Backend APIs)
-
-PostgreSQL (Database)
-
-faster-whisper (Speech-to-text)
-
-Docker Compose (Local setup)
-
-Project Structure
-voiceiq/
-├─ fastapi_backend/
-├─ frontend/
-├─ database/
-├─ nginx/
-├─ scripts/
-├─ infra/
-├─ backend_spring_deprecated/
-├─ docker-compose.yml
-├─ .gitignore
-└─ README.md
-Getting Started
-Prerequisites
-
-Flutter SDK
-
-Python 3.10+
-
-PostgreSQL
-
-Git
-
-Android Studio
-
-Environment Setup
-
-Create a .env file:
-
-DB_NAME=voiceiq
-DB_USER=postgres
-DB_PASS=yourpassword
-JWT_SECRET=your_secret
-GEMINI_API_KEY=your_key
-WHISPER_MODEL_SIZE=base
-WHISPER_DEVICE=cpu
-WHISPER_COMPUTE_TYPE=int8
-Backend Setup
-cd fastapi_backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 9090 --reload
-Frontend Setup
-cd frontend
-flutter pub get
-flutter run --dart-define=VOICEIQ_API_BASE_URL=http://10.0.2.2:9090
-API Flow
-Authentication
-
-POST /api/v1/auth/register
-
-POST /api/v1/auth/login
-
-Voice Processing
-
-Create session
-
-Upload audio
-
-Transcription
-
-Generate feedback
-
-User Data
-
-Progress tracking
-
-Profile management
-
-Development Notes
-
-Use small Whisper models (tiny, base) for faster development
-
-Load models once at startup
-
-Avoid blocking API during inference
-
-Prefer real devices over emulators for testing
-
-Next Steps
-
-Payment integration
-
-Production deployment
-
-Background job queue
-
-Advanced analytics dashboard
-
-Backend profile update APIs
-
-License
-
-MIT License
-
-
----
-
-If you want, I can take this one level higher like your screenshot:
-
-- section icons using SVG (clean, not emoji)  
-- feature cards instead of table  
-- architecture diagram image  
-- animated GIF demo  
-
-Just tell me 👍
