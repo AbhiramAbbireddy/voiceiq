@@ -41,9 +41,14 @@ frontend/.flutter-plugins-dependencies
 frontend/.metadata
 frontend/frontend.iml
 frontend/android/.gradle/
+frontend/android/.kotlin/
 frontend/android/app/debug/
 frontend/android/app/profile/
 frontend/android/app/release/
+frontend/android/*.hprof
+frontend/android/hs_err_pid*.log
+frontend/android/replay_pid*.log
+frontend/android/captures/
 
 # Java / Spring archived backend
 backend_spring_deprecated/.idea/
