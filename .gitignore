@@ -60,3 +60,5 @@ backend_spring_deprecated/uploads/*
 .m2/
 .gradle/
 *.iml
+
+backend_spring_deprecated/
