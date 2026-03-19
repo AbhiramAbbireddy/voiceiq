@@ -26,6 +26,11 @@ logger = logging.getLogger("fastapi-backend")
 
 app = FastAPI(title="VoiceIQ API")
 
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
 # ── Faster-Whisper Initialization ──────────────────────────────
 # Lazy load Whisper model to avoid blocking startup (first load downloads model)
 MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "tiny") # Changed "base" to "tiny" to save ~800MB RAM
