@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:15
+    container_name: voiceiq_db_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    networks:
+      - voiceiq_prod_net
+
+  backend:
+    build:
+      context: ./fastapi_backend
+      dockerfile: Dockerfile
+      args:
+        WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-base}
+    container_name: voiceiq_fastapi_prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_HOST: db
+      DB_PORT: "5432"
+      JWT_SECRET: ${JWT_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-base}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
+    volumes:
+      - ./fastapi_backend/uploads:/app/uploads
+    expose:
+      - "8000"
+    networks:
+      - voiceiq_prod_net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: voiceiq_nginx_prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - voiceiq_prod_net
+
+volumes:
+  pgdata_prod:
+
+networks:
+  voiceiq_prod_net:
+    driver: bridge

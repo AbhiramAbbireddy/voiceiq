@@ -10,9 +10,9 @@ class ApiClient {
        _dio = Dio(
          BaseOptions(
            baseUrl: baseUrl,
-           connectTimeout: const Duration(seconds: 20),
-           receiveTimeout: const Duration(seconds: 30),
-           sendTimeout: const Duration(seconds: 30),
+           connectTimeout: const Duration(seconds: 45),
+           receiveTimeout: const Duration(seconds: 90),
+           sendTimeout: const Duration(seconds: 90),
            headers: const {'Content-Type': 'application/json'},
          ),
        ) {
@@ -72,9 +72,9 @@ class ApiClient {
   }) async {
     final dio = Dio(
       BaseOptions(
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 60),
-        sendTimeout: const Duration(seconds: 60),
+        connectTimeout: const Duration(seconds: 45),
+        receiveTimeout: const Duration(seconds: 120),
+        sendTimeout: const Duration(seconds: 120),
         validateStatus: (status) => status != null && status >= 200 && status < 300,
       ),
     );
@@ -142,6 +142,13 @@ class ApiClient {
     final message = body['message'];
     if (message is String && message.isNotEmpty) {
       return message;
+    }
+    final detail = body['detail'];
+    if (detail is String && detail.isNotEmpty) {
+      return detail;
+    }
+    if (detail is List && detail.isNotEmpty) {
+      return detail.first.toString();
     }
     return 'Unexpected server response';
   }

@@ -13,6 +13,7 @@ class ProfilePage extends StatelessWidget {
     final theme = Theme.of(context);
     final session = controller.session;
     final subscription = controller.subscription;
+    final completedSessions = controller.completedSessionsCount;
 
     void showAction(String message) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -127,7 +128,7 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _ProfileStatsRow(
-              sessionsLabel: '${subscription?.sessionsUsed ?? 0}',
+              sessionsLabel: '$completedSessions',
               planLabel: subscription?.developerAccount == true
                   ? 'Dev Pro'
                   : (session?.plan ?? 'FREE'),

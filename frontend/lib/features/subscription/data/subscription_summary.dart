@@ -31,4 +31,26 @@ class SubscriptionSummary {
       processedSecondsRemaining: json['processedSecondsRemaining'] as int? ?? 0,
     );
   }
+
+  SubscriptionSummary copyWith({
+    String? plan,
+    bool? developerAccount,
+    int? sessionsUsed,
+    int? sessionLimit,
+    int? sessionsRemaining,
+    int? processedSecondsUsed,
+    int? processedSecondsLimit,
+    int? processedSecondsRemaining,
+  }) {
+    return SubscriptionSummary(
+      plan: plan ?? this.plan,
+      developerAccount: developerAccount ?? this.developerAccount,
+      sessionsUsed: sessionsUsed ?? this.sessionsUsed,
+      sessionLimit: sessionLimit ?? this.sessionLimit,
+      sessionsRemaining: sessionsRemaining ?? this.sessionsRemaining,
+      processedSecondsUsed: processedSecondsUsed ?? this.processedSecondsUsed,
+      processedSecondsLimit: processedSecondsLimit ?? this.processedSecondsLimit,
+      processedSecondsRemaining: processedSecondsRemaining ?? this.processedSecondsRemaining,
+    );
+  }
 }

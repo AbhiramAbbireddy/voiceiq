@@ -12,8 +12,7 @@ class ProgressPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final report = controller.latestReport;
-    final subscription = controller.subscription;
-    final sessionCount = subscription?.sessionsUsed ?? 0;
+    final sessionCount = controller.completedSessionsCount;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -53,7 +52,12 @@ class ProgressPage extends StatelessWidget {
                     label: 'Confidence',
                     value: '${report.confidenceScore}',
                   ),
-                  _StatMetricCard(label: 'Plan', value: controller.session?.plan ?? 'FREE'),
+                  _StatMetricCard(
+                    label: 'Plan',
+                    value: controller.subscription?.developerAccount == true
+                        ? 'PRO'
+                        : (controller.session?.plan ?? 'FREE'),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),

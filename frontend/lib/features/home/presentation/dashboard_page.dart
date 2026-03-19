@@ -31,7 +31,7 @@ class DashboardPage extends StatelessWidget {
     final firstName = fullName.trim().split(' ').first;
     final latestReport = controller.latestReport;
     final subscription = controller.subscription;
-    final sessionCount = subscription?.sessionsUsed ?? 0;
+    final sessionCount = controller.completedSessionsCount;
 
     return SafeArea(
       child: SingleChildScrollView(

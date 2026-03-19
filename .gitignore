@@ -42,6 +42,9 @@ frontend/.metadata
 frontend/frontend.iml
 frontend/android/.gradle/
 frontend/android/.kotlin/
+frontend/android/key.properties
+frontend/android/*.jks
+frontend/android/*.keystore
 frontend/android/app/debug/
 frontend/android/app/profile/
 frontend/android/app/release/

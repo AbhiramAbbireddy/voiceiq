@@ -36,6 +36,45 @@ LANGUAGE = os.getenv("WHISPER_LANGUAGE", "en")
 whisper_model = None  # Will be loaded on first use
 
 
+def _get_feedback_analyzer():
+    global analyze_transcript_with_gemini
+    if analyze_transcript_with_gemini is None:
+        from ai_coach import analyze_transcript_with_gemini as gemini_analyzer
+
+        analyze_transcript_with_gemini = gemini_analyzer
+    return analyze_transcript_with_gemini
+
+
+def _ensure_feedback_report(db: Session, recording: models.Recording):
+    feedback = recording.feedback
+    if feedback:
+        return feedback
+
+    transcript_text = (recording.transcript or "").strip()
+    if not transcript_text:
+        return None
+
+    analyzer = _get_feedback_analyzer()
+    feedback_json = analyzer(transcript_text, recording.duration_seconds or 0)
+
+    feedback = db.query(models.FeedbackReport).filter(
+        models.FeedbackReport.recording_id == recording.id
+    ).first()
+    if not feedback:
+        feedback = models.FeedbackReport(recording_id=recording.id)
+        db.add(feedback)
+
+    feedback.overall_score = feedback_json.get("overall_score", 0.0)
+    feedback.grammar_score = feedback_json.get("grammar_score", 0.0)
+    feedback.clarity_score = feedback_json.get("clarity_score", 0.0)
+    feedback.confidence_score = feedback_json.get("confidence_score", 0.0)
+    feedback.pace_score = feedback_json.get("pace_score", 0.0)
+    feedback.ai_comments = feedback_json.get("ai_comments", "No comments provided.")
+    db.commit()
+    db.refresh(feedback)
+    return feedback
+
+
 # ── Auth Endpoints ─────────────────────────────────────────────
 from pydantic import BaseModel, EmailStr
 
@@ -272,23 +311,14 @@ def run_analysis_pipeline(sessionId: str, tmp_path: str, duration_seconds: int):
 
         if full_transcript:
             print("[AI-COACH] Sending text to Google Gemini for Scoring...")
-            from ai_coach import analyze_transcript_with_gemini as gemini_analyzer
-            feedback_json = gemini_analyzer(full_transcript, duration_seconds)
+            _ensure_feedback_report(db, recording)
             print("[AI-COACH] Gemini finished scoring!")
-            
-            feedback = db.query(models.FeedbackReport).filter(models.FeedbackReport.recording_id == recording.id).first()
-            if not feedback:
-                feedback = models.FeedbackReport(recording_id=recording.id)
-                db.add(feedback)
-                
-            feedback.overall_score = feedback_json.get("overall_score", 0.0)
-            feedback.grammar_score = feedback_json.get("grammar_score", 0.0)
-            feedback.clarity_score = feedback_json.get("clarity_score", 0.0)
-            feedback.confidence_score = feedback_json.get("confidence_score", 0.0)
-            feedback.pace_score = feedback_json.get("pace_score", 0.0)
-            feedback.ai_comments = feedback_json.get("ai_comments", "No comments provided.")
-            db.commit()
             print("[AI-COACH] Report saved to Database!")
+        else:
+            session.status = "FAILED"
+            db.commit()
+            print(f"[AI-COACH] ERROR: No transcript could be extracted for session {sessionId}.")
+            return
             
         session.status = "COMPLETED"
         db.commit()
@@ -360,15 +390,50 @@ def get_analysis_status(sessionId: str, db: Session = Depends(database.get_db), 
         }
         
     recording = db.query(models.Recording).filter(models.Recording.session_id == sessionId).first()
-    if not recording or not recording.feedback:
+    if not recording:
         return {
-            "success": False,
-            "data": {"status": "FAILED"},
-            "message": "Analysis failed silently."
+            "success": True,
+            "data": {
+                "sessionId": sessionId,
+                "status": "FAILED",
+                "reportReady": False,
+                "transcriptReady": False,
+                "message": "Recording data is missing for this session."
+            },
+            "message": "Analysis failed."
         }
 
     feedback = recording.feedback
-    
+    if not feedback:
+        try:
+            feedback = _ensure_feedback_report(db, recording)
+        except Exception as exc:
+            logger.exception("Failed to rebuild feedback for session %s", sessionId)
+            return {
+                "success": True,
+                "data": {
+                    "sessionId": sessionId,
+                    "status": "FAILED",
+                    "reportReady": False,
+                    "transcriptReady": bool((recording.transcript or "").strip()),
+                    "message": f"Feedback generation failed: {exc}"
+                },
+                "message": "Analysis failed."
+            }
+
+    if not feedback:
+        return {
+            "success": True,
+            "data": {
+                "sessionId": sessionId,
+                "status": "FAILED",
+                "reportReady": False,
+                "transcriptReady": bool((recording.transcript or "").strip()),
+                "message": "No speech was detected clearly enough to generate feedback."
+            },
+            "message": "Analysis failed."
+        }
+
     return {
         "success": True,
         "data": {
@@ -395,4 +460,116 @@ def get_analysis_status(sessionId: str, db: Session = Depends(database.get_db), 
             }
         },
         "message": "Feedback report retrieved"
+    }
+
+
+@app.get("/api/v1/feedback/reports/{sessionId}")
+def get_feedback_report(
+    sessionId: str,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    session = db.query(models.InterviewSession).filter(
+        models.InterviewSession.id == sessionId,
+        models.InterviewSession.user_id == current_user.id,
+    ).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    recording = db.query(models.Recording).filter(models.Recording.session_id == sessionId).first()
+    if not recording:
+        raise HTTPException(status_code=404, detail="Feedback report not found")
+
+    feedback = recording.feedback
+    if not feedback:
+        try:
+            feedback = _ensure_feedback_report(db, recording)
+        except Exception as exc:
+            logger.exception("Failed to rebuild feedback report for session %s", sessionId)
+            raise HTTPException(status_code=500, detail=f"Feedback generation failed: {exc}")
+
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback report not found")
+
+    transcript_text = recording.transcript or ""
+    ai_comments = feedback.ai_comments or "Feedback generated successfully."
+
+    strengths = []
+    weaknesses = []
+    suggestions = []
+
+    if feedback.clarity_score >= 70:
+        strengths.append("Your response was reasonably clear and easy to follow.")
+    else:
+        weaknesses.append("Your response could be clearer and more structured.")
+        suggestions.append("Break your answer into smaller points with a cleaner beginning, middle, and end.")
+
+    if feedback.confidence_score >= 70:
+        strengths.append("Your tone came across as fairly confident.")
+    else:
+        weaknesses.append("Your delivery sounded less confident than it could be.")
+        suggestions.append("Slow down slightly and finish each sentence with conviction.")
+
+    if feedback.pace_score >= 70:
+        strengths.append("Your speaking pace was comfortable for listening.")
+    else:
+        weaknesses.append("Your speaking pace needs better control.")
+        suggestions.append("Aim for a steadier pace and add brief pauses between ideas.")
+
+    if not strengths:
+        strengths.append("You completed the answer and gave enough material for analysis.")
+    if not weaknesses:
+        weaknesses.append("There are still a few areas you can refine to sound sharper.")
+    if not suggestions:
+        suggestions.append("Practice the same answer once more and focus on structure, pace, and confidence.")
+
+    filler_score = int(round((feedback.grammar_score + feedback.clarity_score) / 2.0))
+
+    return {
+        "success": True,
+        "data": {
+            "reportId": str(feedback.id),
+            "sessionId": str(session.id),
+            "overallScore": int(round(feedback.overall_score or 0)),
+            "paceScore": int(round(feedback.pace_score or 0)),
+            "clarityScore": int(round(feedback.clarity_score or 0)),
+            "confidenceScore": int(round(feedback.confidence_score or 0)),
+            "fillerScore": filler_score,
+            "transcriptText": transcript_text,
+            "transcriptHighlights": [],
+            "summary": ai_comments,
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "suggestions": suggestions,
+            "betterAnswer": "",
+            "fillerBreakdown": [],
+            "hesitationPhrases": [],
+        },
+        "message": "Feedback report fetched successfully",
+    }
+
+
+@app.get("/api/v1/subscription/me")
+def get_current_subscription(
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    plan = current_user.plan or "FREE"
+    developer_account = current_user.email.endswith("@gmail.com")
+    session_limit = 9999 if plan == "PRO" else 10
+    processed_seconds_limit = 999999 if plan == "PRO" else 900
+
+    return {
+        "success": True,
+        "data": {
+            "plan": plan,
+            "developerAccount": developer_account,
+            "sessionsUsed": 0,
+            "sessionLimit": session_limit,
+            "sessionsRemaining": session_limit,
+            "processedSecondsUsed": 0,
+            "processedSecondsLimit": processed_seconds_limit,
+            "processedSecondsRemaining": processed_seconds_limit,
+        },
+        "message": "Subscription fetched successfully",
     }

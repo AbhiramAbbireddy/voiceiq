@@ -1,200 +1,168 @@
-<p align="center">
-  <h1 align="center">VoiceIQ — AI Interview Speaking Coach</h1>
-  <p align="center">
-    AI-powered platform to help users improve interview communication through speech analysis and feedback.
-  </p>
-</p>
+# VoiceIQ
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Flutter-Mobile-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/FastAPI-Backend-green?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/PostgreSQL-Database-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Whisper-AI-orange?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Python-3.10+-yellow?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Docker-Containerization-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-lightgrey?style=for-the-badge" />
-</p>
+VoiceIQ is an AI speaking coach for interview practice. Users record an answer, the backend transcribes it with Faster-Whisper, generates coaching feedback, and the Flutter app shows a report with scores, transcript, and progress.
 
----
+## What is in this repo
 
-## Overview
+- `fastapi_backend/` - FastAPI backend, Whisper transcription, Gemini-backed coaching fallback
+- `frontend/` - Flutter Android app
+- `database/` - SQL bootstrap files
+- `nginx/` - reverse proxy config for production
+- `docker-compose.yml` - local/dev stack
+- `docker-compose.prod.yml` - production-style stack
 
-VoiceIQ is an AI-powered interview speaking coach designed to help users prepare for interviews by analyzing their spoken responses.
+## Local development
 
-Users can record answers, upload audio, receive AI-generated feedback, and track their progress over time. The system combines a mobile frontend with a scalable backend and speech-to-text intelligence.
+### Backend
 
----
-
-## Navigation
-
-- Features  
-- Architecture  
-- Tech Stack  
-- Project Structure  
-- Getting Started  
-- API Flow  
-- Development Notes  
-- Next Steps  
-- License  
-
----
-
-## Features
-
-| Module | Description |
-|--------|------------|
-| Voice Recording | Record answers or upload audio files |
-| Speech-to-Text | Transcription using faster-whisper |
-| AI Feedback | Analyze responses and generate improvement suggestions |
-| Reports | Structured feedback with transcript display |
-| Authentication | Secure login and signup with JWT |
-| Progress Tracking | Monitor user performance over time |
-
----
-
-## Architecture
-
-```text
-Flutter Mobile App
-        │
-        ▼
-FastAPI Backend (Python)
-        │
-        ├── Speech-to-Text (Whisper)
-        ├── AI Feedback Engine
-        └── PostgreSQL Database
-```
-
----
-
-## Tech Stack
-
-- Flutter (Mobile frontend)  
-- FastAPI (Backend APIs)  
-- PostgreSQL (Database)  
-- faster-whisper (Speech-to-text)  
-- Docker Compose (Local development)
-
----
-
-## Project Structure
-
-```text
-voiceiq/
-├─ fastapi_backend/
-├─ frontend/
-├─ database/
-├─ nginx/
-├─ scripts/
-├─ infra/
-├─ backend_spring_deprecated/
-├─ docker-compose.yml
-├─ .gitignore
-└─ README.md
-```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Flutter SDK  
-- Python 3.10+  
-- PostgreSQL  
-- Git  
-- Android Studio  
-
----
-
-### Environment Setup
-
-Create a `.env` file in the root directory:
-
-```env
-DB_NAME=voiceiq
-DB_USER=postgres
-DB_PASS=yourpassword
-JWT_SECRET=your_super_secret_key
-GEMINI_API_KEY=your_key_if_used
-WHISPER_MODEL_SIZE=base
-WHISPER_DEVICE=cpu
-WHISPER_COMPUTE_TYPE=int8
-```
-
----
-
-### Backend Setup
-
-```bash
-cd fastapi_backend
-python -m venv venv
-venv\Scripts\activate
+```powershell
+cd E:\voiceiq\fastapi_backend
+python -m venv .venv
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 9090 --reload
+$env:WHISPER_MODEL_SIZE="tiny"
+python -m uvicorn main:app --host 0.0.0.0 --port 9090 --reload
 ```
 
-Access API docs:
+API docs:
 
-```
-http://localhost:9090/docs
-```
+- [http://localhost:9090/docs](http://localhost:9090/docs)
+- [http://localhost:9090/healthz](http://localhost:9090/healthz)
 
----
+### Flutter app
 
-### Frontend Setup
-
-```bash
-cd frontend
+```powershell
+cd E:\voiceiq\frontend
 flutter pub get
-flutter run --dart-define=VOICEIQ_API_BASE_URL=http://10.0.2.2:9090
+flutter run --dart-define=VOICEIQ_API_BASE_URL=http://10.101.123.83:9090
 ```
 
-For physical device:
+Replace `10.101.123.83` with your laptop LAN IP for physical-device testing.
+
+## Production backend deployment
+
+### 1. Prepare the server
+
+Install these on your VPS or cloud VM:
+
+- Docker
+- Docker Compose plugin
+
+Copy the repo to the server, then create a production env file from [`.env.production.example`](E:\voiceiq\.env.production.example).
+
+Example:
 
 ```bash
-flutter run --dart-define=VOICEIQ_API_BASE_URL=http://<your-ip>:9090
+cp .env.production.example .env
 ```
 
----
+Update at least:
 
-## API Flow
+- `DB_PASS`
+- `JWT_SECRET`
+- `GEMINI_API_KEY`
+- `WHISPER_MODEL_SIZE`
 
-### Authentication
-- POST /api/v1/auth/register  
-- POST /api/v1/auth/login  
+### 2. Start the production stack
 
-### Voice Processing
-- Create session  
-- Upload audio  
-- Transcription  
-- Generate feedback  
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+```
 
-### User Data
-- Progress tracking  
-- Profile management  
+This starts:
 
----
+- PostgreSQL
+- FastAPI backend
+- Nginx reverse proxy on port `80`
 
-## Development Notes
+### 3. Verify the server
 
-- Use smaller Whisper models (`tiny`, `base`) during development  
-- Load models once at application startup  
-- Avoid blocking API during inference tasks  
-- Prefer real devices over emulators for performance testing  
+Open:
 
----
+- `http://YOUR_SERVER_IP/healthz`
+- `http://YOUR_SERVER_IP/docs`
 
-## Next Steps
+If those work, the backend is live.
 
-- Payment integration  
-- Production deployment  
-- Background job queue for AI processing  
-- Advanced analytics dashboard  
-- Backend profile update APIs  
+## Android release build
 
----
+### 1. Create a keystore
 
-## License
+Run this on your machine:
 
-This project is licensed under the MIT License.
+```powershell
+keytool -genkey -v -keystore E:\voiceiq\frontend\android\voiceiq-release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias voiceiq
+```
+
+### 2. Create key.properties
+
+Copy [key.properties.example](E:\voiceiq\frontend\android\key.properties.example) to `frontend/android/key.properties` and fill your real values.
+
+Example:
+
+```properties
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=voiceiq
+storeFile=E:\\voiceiq\\frontend\\android\\voiceiq-release-keystore.jks
+```
+
+Important:
+
+- `frontend/android/key.properties` is ignored by Git
+- your keystore file should also stay private
+
+### 3. Build the APK
+
+```powershell
+cd E:\voiceiq\frontend
+flutter clean
+flutter pub get
+flutter build apk --release --dart-define=VOICEIQ_API_BASE_URL=http://YOUR_SERVER_IP
+```
+
+The APK will be generated at:
+
+- [app-release.apk](E:\voiceiq\frontend\build\app\outputs\flutter-apk\app-release.apk)
+
+### 4. Recommended store build
+
+For Play Store upload, build an App Bundle instead of only an APK:
+
+```powershell
+flutter build appbundle --release --dart-define=VOICEIQ_API_BASE_URL=http://YOUR_SERVER_IP
+```
+
+Official Flutter docs recommend using `flutter build appbundle` for Play Store distribution: [Flutter docs](https://docs.flutter.dev/perf/app-size)
+
+## Production notes
+
+- The Android app now uses a real production package id: `com.voiceiq.app`
+- Release builds should always pass `VOICEIQ_API_BASE_URL`
+- The backend Docker build now pre-downloads the configured Whisper model
+- `tiny` is best for local development
+- `base` is a better default starting point for a low-cost production server
+- If Gemini fails, the backend still generates a local fallback report
+
+## FastAPI deployment reference
+
+FastAPI's official deployment guidance for Docker and server processes:
+
+- [FastAPI Docker deployment docs](https://fastapi.tiangolo.com/pt/deployment/docker/)
+- [FastAPI deployment concepts](https://fastapi.tiangolo.com/de/deployment/concepts/)
+
+## Suggested launch order
+
+1. Deploy backend to the server
+2. Verify `/healthz` and `/docs`
+3. Build release APK with the production API URL
+4. Install APK on phone and test signup, record, upload, report, progress
+5. After that, set up HTTPS and a domain name
+
+## Next production upgrades
+
+- Move Gemini code from `google.generativeai` to `google.genai`
+- Add HTTPS with Nginx + Certbot
+- Replace local uploads with S3/R2 in the FastAPI backend too
+- Add proper DB migrations instead of only `create_all()`
+- Add background job queue if transcription load increases

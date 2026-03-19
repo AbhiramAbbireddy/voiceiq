@@ -70,6 +70,27 @@ class FeedbackReport {
               .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'reportId': reportId,
+      'sessionId': sessionId,
+      'overallScore': overallScore,
+      'paceScore': paceScore,
+      'clarityScore': clarityScore,
+      'confidenceScore': confidenceScore,
+      'fillerScore': fillerScore,
+      'transcriptText': transcriptText,
+      'transcriptHighlights': transcriptHighlights.map((item) => item.toJson()).toList(),
+      'summary': summary,
+      'strengths': strengths,
+      'weaknesses': weaknesses,
+      'suggestions': suggestions,
+      'betterAnswer': betterAnswer,
+      'fillerBreakdown': fillerBreakdown,
+      'hesitationPhrases': hesitationPhrases,
+    };
+  }
 }
 
 class TranscriptHighlight {
@@ -95,5 +116,15 @@ class TranscriptHighlight {
       endIndex: json['endIndex'] as int? ?? 0,
       message: json['message'] as String? ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'value': value,
+      'startIndex': startIndex,
+      'endIndex': endIndex,
+      'message': message,
+    };
   }
 }

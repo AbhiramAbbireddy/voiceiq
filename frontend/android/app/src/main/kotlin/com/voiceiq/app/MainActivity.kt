@@ -1,4 +1,4 @@
-package com.example.frontend
+package com.voiceiq.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../data/feedback_report.dart';
 
@@ -6,6 +10,80 @@ class FeedbackReportPage extends StatelessWidget {
   const FeedbackReportPage({super.key, required this.report});
 
   final FeedbackReport report;
+
+  Future<void> _copyReport(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: _buildExportText()));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Report copied to clipboard.')),
+      );
+    }
+  }
+
+  Future<void> _saveReport(BuildContext context) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final safeSessionId = report.sessionId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    final file = File('${directory.path}${Platform.pathSeparator}voiceiq-report-$safeSessionId.txt');
+    await file.writeAsString(_buildExportText());
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Report saved to ${file.path}')),
+      );
+    }
+  }
+
+  String _buildExportText() {
+    final buffer = StringBuffer()
+      ..writeln('VoiceIQ Session Report')
+      ..writeln('Session ID: ${report.sessionId}')
+      ..writeln('Overall Score: ${report.overallScore}/100')
+      ..writeln('Pace: ${report.paceScore}')
+      ..writeln('Clarity: ${report.clarityScore}')
+      ..writeln('Confidence: ${report.confidenceScore}')
+      ..writeln('Filler Words: ${report.fillerScore}')
+      ..writeln()
+      ..writeln('Summary')
+      ..writeln(report.summary)
+      ..writeln()
+      ..writeln('Transcript')
+      ..writeln(report.transcriptText);
+
+    if (report.strengths.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Strengths');
+      for (final item in report.strengths) {
+        buffer.writeln('- $item');
+      }
+    }
+
+    if (report.weaknesses.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Needs work');
+      for (final item in report.weaknesses) {
+        buffer.writeln('- $item');
+      }
+    }
+
+    if (report.suggestions.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Suggestions');
+      for (final item in report.suggestions) {
+        buffer.writeln('- $item');
+      }
+    }
+
+    if (report.betterAnswer.isNotEmpty) {
+      buffer
+        ..writeln()
+        ..writeln('Better way to say it')
+        ..writeln(report.betterAnswer);
+    }
+
+    return buffer.toString().trim();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +110,7 @@ class FeedbackReportPage extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () => _copyReport(context),
                     icon: const Icon(Icons.ios_share_rounded),
                   ),
                 ],
@@ -102,7 +180,7 @@ class FeedbackReportPage extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: () => _saveReport(context),
                   child: const Text('Save report'),
                 ),
               ),
